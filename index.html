@@ -1,10 +1,101 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>霓虹粒子爱心</title><style>
-*{box-sizing:border-box}html,body{margin:0;overflow:hidden;background:#030204;color:#fff;font-family:ui-monospace,monospace}main,canvas{position:absolute;inset:0;width:100%;height:100%}.code{position:absolute;inset:-40% 7%;opacity:.35;color:#77566f;font-size:11px;line-height:22px;white-space:pre;animation:scroll 28s linear infinite}.shade{position:absolute;inset:0;background:radial-gradient(circle,#19051122,#020203cc 78%)}canvas{touch-action:none;cursor:pointer}.tools{position:absolute;z-index:3;right:28px;bottom:22px;display:flex;gap:8px}.tools button{height:40px;padding:0 17px;border:1px solid #442b39;border-radius:999px;background:#120a10cc;color:#bc91ab;cursor:pointer}.tools .hot{color:#fff;background:#d71990;border-color:#d71990}.hint{position:absolute;z-index:2;left:50%;bottom:35px;transform:translateX(-50%);color:#806173;font-size:10px;pointer-events:none}.phase{position:absolute;z-index:2;left:28px;bottom:35px;color:#9a7189;font-size:10px}.phase i{display:inline-block;width:5px;height:5px;border-radius:50%;background:#ff2baa;box-shadow:0 0 12px #ff2baa;margin-right:8px}@keyframes scroll{to{transform:translateY(-33%)}}@media(max-width:640px){.tools{left:20px;right:20px}.tools button{flex:1}.hint{bottom:76px}.phase{top:22px;bottom:auto}.code{font-size:9px;line-height:18px}}
-</style></head><body><main><pre class="code" id="code"></pre><div class="shade"></div><canvas id="c"></canvas><div class="phase"><i></i><span id="phase">聚合</span></div><div class="hint">点击画面 · 提前触发爆发</div><div class="tools"><button id="pause">暂停动画</button><button id="replay" class="hot">重新播放</button></div></main><script>
-const py=`import math, random\n\ndef heart_point(t, radius):\n    x = 16 * math.sin(t) ** 3\n    y = -(13*math.cos(t)-5*math.cos(2*t)-2*math.cos(3*t)-math.cos(4*t))\n    return x*radius, y*radius\n\nwhile running:\n    phase = timeline(time % 8)\n    update_particles(phase)\n    render_transparent_layer()\n`;code.textContent=(py+'\n').repeat(14);
-const c=document.querySelector('#c'),x=c.getContext('2d'),label=document.querySelector('#phase');let W,H,D,P=[],time=0,paused=false,last=performance.now();const clamp=v=>Math.max(0,Math.min(1,v)),ease=t=>{t=clamp(t);return t*t*(3-2*t)};
-function make(){P=[];let n=W<650?650:1100;for(let i=0;i<n;i++){let t=Math.random()*Math.PI*2,r=Math.sqrt(Math.random()),hx=16*Math.sin(t)**3*r,hy=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*r,a=Math.random()*Math.PI*2;P.push({x:hx,y:hy,z:(Math.random()-.5)*7,sx:(Math.random()-.5)*90,sy:(Math.random()-.5)*65,vx:Math.cos(a)*(.7+Math.random()*3),vy:Math.sin(a)*(.7+Math.random()*3)-1,size:.6+Math.random()*2.4,h:Math.random()>.2?325:292,q:Math.random()*99})}}
-function resize(){D=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0);make()}addEventListener('resize',resize);resize();
-function draw(now){let dt=Math.min(.04,(now-last)/1000);last=now;if(!paused)time+=dt;let t=time%8,s=Math.min(W,H)*(W<650?.0175:.0205),cx=W/2,cy=H/2,phase=t<1?'聚合':t<3.2?'旋转':t<3.6?'蓄能':t<5.2?'爆发':t<7?'回流':'完成';label.textContent=phase;x.clearRect(0,0,W,H);x.globalCompositeOperation='lighter';for(let p of P){let px,py,z=p.z,a=1,rot=0;if(t<1){let e=ease(t);px=p.sx*(1-e)+p.x*e;py=p.sy*(1-e)+p.y*e;a=.2+.8*e}else if(t<3.2){rot=(t-1)*1.2;px=p.x*Math.cos(rot)+p.z*Math.sin(rot);z=-p.x*Math.sin(rot)+p.z*Math.cos(rot);py=p.y}else if(t<3.6){let q=(t-3.2)/.4,j=Math.sin(q*38+p.q)*q*1.7;px=p.x*Math.cos(2.64)+p.z*Math.sin(2.64)+j;py=p.y+j*.5}else if(t<5.2){let e=(t-3.6)/1.6,k=(1-Math.exp(-e*5))*42;px=p.x*Math.cos(2.64)+p.z*Math.sin(2.64)+p.vx*k;py=p.y+p.vy*k+e*e*26;a=1-ease((e-.45)/.55)*.82}else if(t<7){let e=ease((t-5.2)/1.8),ex=p.x*Math.cos(2.64)+p.z*Math.sin(2.64)+p.vx*42,ey=p.y+p.vy*42+26,rr=2.64*(1-e),home=p.x*Math.cos(rr)+p.z*Math.sin(rr);px=ex*(1-e)+home*e;py=ey*(1-e)+p.y*e;a=.2+.8*e}else{px=p.x;py=p.y}let tw=.55+.45*Math.sin(now*.006+p.q*3),X=cx+px*s,Y=cy+py*s,r=p.size*(phase==='蓄能'?1.4:1);x.globalAlpha=a*(.45+tw*.5);x.fillStyle=`hsl(${p.h} 100% ${65+tw*13}%)`;x.shadowColor=x.fillStyle;x.shadowBlur=10+r*3;x.beginPath();x.arc(X,Y,r,0,7);x.fill()}x.globalAlpha=1;x.globalCompositeOperation='source-over';requestAnimationFrame(draw)}requestAnimationFrame(draw);
-c.onpointerdown=()=>time=3.25;document.querySelector('#pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'继续动画':'暂停动画'};document.querySelector('#replay').onclick=()=>time=0;
-</script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#05070c" />
+  <title>Neon Heart Code</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070c}
+    body{font-family:Inter,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#a7b2c4}
+    canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+    .ui{position:fixed;z-index:3;left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;pointer-events:none}
+    .brand{display:flex;align-items:center;gap:9px;color:#d9deea;font:600 11px/1 Inter,sans-serif;letter-spacing:.18em;text-transform:uppercase;opacity:.72}.dot{width:7px;height:7px;border-radius:50%;background:#ff2496;box-shadow:0 0 14px #ff2496}
+    .actions{display:flex;gap:8px;pointer-events:auto}button{width:42px;height:42px;border:1px solid rgba(255,255,255,.1);border-radius:50%;background:rgba(12,15,23,.55);backdrop-filter:blur(12px);color:#dce3ee;font-size:17px;cursor:pointer}button:active{transform:scale(.94)}
+    .hint{position:fixed;z-index:3;bottom:max(18px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);font:500 10px/1 Inter,sans-serif;letter-spacing:.12em;color:#6f7786;white-space:nowrap;pointer-events:none}
+    @media(max-width:600px){.brand{font-size:9px}.actions button{width:38px;height:38px}.hint{font-size:9px}.ui{top:max(14px,env(safe-area-inset-top))}}
+    @media(prefers-reduced-motion:reduce){.hint::after{content:' · 可点击暂停'}}
+  </style>
+</head>
+<body>
+  <canvas id="scene" aria-label="滚动的 Python 代码与粉色粒子爱心动画"></canvas>
+  <div class="ui"><div class="brand"><i class="dot"></i>Neon Heart / Python</div><div class="actions"><button id="reset" aria-label="重新聚合">↻</button><button id="pause" aria-label="暂停动画">Ⅱ</button><button id="full" aria-label="全屏">⛶</button></div></div>
+  <div class="hint">点击产生波纹 · 长按拖拽粒子散开</div>
+  <script>
+  (()=>{
+    const canvas=document.querySelector('#scene'),ctx=canvas.getContext('2d',{alpha:false});
+    const fx=document.createElement('canvas'),fctx=fx.getContext('2d');
+    const pauseBtn=document.querySelector('#pause');let W=0,H=0,dpr=1,cx=0,cy=0,scale=1,paused=false,start=performance.now(),last=start,scroll=0,particles=[],dragging=false,dragStart=0,dragX=0,dragY=0,lastDragX=0,lastDragY=0;
+    const lines=`import math
+import random
+from dataclasses import dataclass
+
+@dataclass
+class Particle:
+    position: Vector2
+    velocity: Vector2
+    brightness: float = 1.0
+
+def heart(t: float) -> tuple[float, float]:
+    x = 16 * math.sin(t) ** 3
+    y = (13 * math.cos(t)
+         - 5 * math.cos(2 * t)
+         - 2 * math.cos(3 * t)
+         - math.cos(4 * t))
+    return x, -y
+
+def breathe(time: float) -> float:
+    pulse = math.sin(time * 1.35)
+    return 1.0 + pulse * 0.045
+
+def update_particles(particles, dt):
+    for particle in particles:
+        direction = target - particle.position
+        particle.velocity += direction * dt * 0.8
+        particle.velocity *= 0.965
+        particle.position += particle.velocity * dt
+
+def render_glow(layer, particles):
+    draw_particles(layer, particles, radius=14, alpha=10)
+    draw_particles(layer, particles, radius=7, alpha=26)
+    draw_particles(layer, particles, radius=2, alpha=230)
+
+if __name__ == "__main__":
+    while running:
+        update_particles(particles, dt)
+        render_glow(transparent_layer, particles)
+        screen.blit(code_background, (0, 0))
+        screen.blit(transparent_layer, (0, 0))`.split('\n');
+    const rnd=(a,b)=>a+Math.random()*(b-a);
+    function hp(t){return [16*Math.sin(t)**3,-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))]}
+    function inside(){const e=hp(Math.random()*Math.PI*2),r=Math.sqrt(Math.random());return[e[0]*r,e[1]*r]}
+    function rebuild(){particles=[];const count=Math.min(innerWidth<600?1050:1850,Math.round(W*H/500));for(let i=0;i<count;i++){const b=inside(),a=Math.random()*Math.PI*2,d=rnd(8,Math.min(W,H)*.18);particles.push({bx:b[0],by:b[1],x:cx+b[0]*scale+Math.cos(a)*d,y:cy+b[1]*scale+Math.sin(a)*d,vx:rnd(-10,10),vy:rnd(-10,10),s:rnd(.55,2.05),p:rnd(0,6.28),bright:rnd(.55,1),drift:Math.random()<.04})}start=performance.now()}
+    function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=fx.width=W*dpr;canvas.height=fx.height=H*dpr;canvas.style.width=fx.style.width=W+'px';canvas.style.height=fx.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0);fctx.setTransform(dpr,0,0,dpr,0,0);cx=W*(W<650?.5:.58);cy=H*.51;scale=Math.min(W,H)*(W<650?.023:.0215);rebuild()}
+    function codeColor(s){s=s.trim();if(s.startsWith('#'))return'#37695d';if(/^(def |class |@)/.test(s))return'#6094be';if(/(import |from |return |while |for |if )/.test(s))return'#8068a4';if(/["']/.test(s))return'#8e7750';return'#4c5b6e'}
+    function background(dt){ctx.fillStyle='#05070c';ctx.fillRect(0,0,W,H);const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*.44);g.addColorStop(0,'rgba(25,15,52,.22)');g.addColorStop(1,'rgba(5,7,12,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);scroll=(scroll+dt*24)%(lines.length*25);ctx.font=`${W<600?11:14}px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace`;ctx.textBaseline='top';const lh=W<600?21:25,cycle=lines.length*lh,alpha=W<600?.52:.7;ctx.globalAlpha=alpha;for(let k=-1;k<2;k++)for(let i=0;i<lines.length;i++){const y=k*cycle+i*lh-scroll;if(y>-lh&&y<H){ctx.fillStyle='#26303d';ctx.fillText(String(i+1).padStart(2,'0'),W<600?16:42,y);ctx.fillStyle=codeColor(lines[i]);ctx.fillText(lines[i].replaceAll('    ','  '),W<600?52:84,y)}}ctx.globalAlpha=1;ctx.fillStyle='rgba(1,3,8,.25)';ctx.fillRect(0,0,W,H)}
+    function update(t,dt){const breath=1+Math.sin(t*1.3)*.047+Math.sin(t*2.6+.8)*.009,form=Math.min(1,t/2.8);for(const p of particles){const tx=cx+p.bx*scale*breath+Math.sin(t*1.7+p.p)*.7,ty=cy+p.by*scale*breath+Math.cos(t*1.3+p.p*1.17)*.7,k=3.2+(1-(1-form)**3)*5;p.vx+=(tx-p.x)*k*dt;p.vy+=(ty-p.y)*k*dt;const drag=Math.pow(.9,dt*60);p.vx*=drag;p.vy*=drag;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.drift&&Math.sin(t*.72+p.p)>.92){p.y-=18*dt;p.x+=Math.sin(t*2.1+p.p)*7*dt}}}
+    function heart(t){fctx.clearRect(0,0,W,H);fctx.globalCompositeOperation='source-over';const aura=fctx.createRadialGradient(cx,cy,8,cx,cy,Math.min(W,H)*.27);aura.addColorStop(0,'rgba(255,35,160,.14)');aura.addColorStop(.45,'rgba(255,20,145,.055)');aura.addColorStop(1,'rgba(255,20,145,0)');fctx.fillStyle=aura;fctx.fillRect(0,0,W,H);fctx.globalCompositeOperation='lighter';for(const p of particles){const e=Math.max(.25,p.bright*(.78+.22*Math.sin(t*4+p.p))),r=p.s*(W<600?.78:1);fctx.beginPath();fctx.fillStyle=`rgba(255,18,139,${.035+.05*e})`;fctx.arc(p.x,p.y,r*7+2,0,6.29);fctx.fill()}for(const p of particles){const e=Math.max(.25,p.bright*(.78+.22*Math.sin(t*4+p.p))),r=Math.max(.7,p.s*(W<600?.78:1));fctx.beginPath();fctx.fillStyle=`rgba(255,45,166,${.18+.26*e})`;fctx.arc(p.x,p.y,r*2.6,0,6.29);fctx.fill();fctx.beginPath();fctx.fillStyle=`rgba(255,${60+90*e},${170+70*e},${.6+.36*e})`;fctx.arc(p.x,p.y,r,0,6.29);fctx.fill();if(e>.82&&r>1.35){fctx.fillStyle='rgba(255,235,248,.72)';fctx.fillRect(p.x,p.y,1,1)}}fctx.globalCompositeOperation='source-over';ctx.drawImage(fx,0,0,W,H)}
+    function frame(now){let dt=Math.min((now-last)/1000,.033);last=now;if(paused)dt=0;const t=(now-start)/1000;if(!paused)update(t,dt);background(dt);heart(t);requestAnimationFrame(frame)}
+    function burst(x,y){for(const p of particles){const dx=p.x-x,dy=p.y-y,d=Math.hypot(dx,dy);if(d<150){const f=(1-d/150)*210;p.vx+=dx/(d||1)*f;p.vy+=dy/(d||1)*f}}}
+    function scatter(x,y,dx,dy){
+      const speed=Math.min(34,Math.hypot(dx,dy)),radius=Math.min(W,H)<650?115:155;
+      for(const p of particles){
+        const px=p.x-x,py=p.y-y,d=Math.hypot(px,py);
+        if(d<radius){
+          const fall=(1-d/radius),force=(300+speed*19)*fall*fall;
+          p.vx+=px/(d||1)*force+dx*fall*5.5+rnd(-18,18)*fall;
+          p.vy+=py/(d||1)*force+dy*fall*5.5+rnd(-18,18)*fall;
+        }
+      }
+    }
+    canvas.addEventListener('pointerdown',e=>{dragging=true;dragStart=performance.now();dragX=lastDragX=e.clientX;dragY=lastDragY=e.clientY;canvas.setPointerCapture?.(e.pointerId);burst(dragX,dragY)});
+    canvas.addEventListener('pointermove',e=>{if(!dragging)return;const x=e.clientX,y=e.clientY,dx=x-lastDragX,dy=y-lastDragY;dragX=x;dragY=y;if(performance.now()-dragStart>110||Math.hypot(dx,dy)>2)scatter(x,y,dx,dy);lastDragX=x;lastDragY=y});
+    const endDrag=e=>{dragging=false;canvas.releasePointerCapture?.(e.pointerId)};
+    canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);canvas.addEventListener('pointerleave',e=>{if(e.buttons===0)endDrag(e)});
+    addEventListener('resize',resize,{passive:true});
+    document.querySelector('#reset').onclick=rebuild;pauseBtn.onclick=()=>{paused=!paused;pauseBtn.textContent=paused?'▶':'Ⅱ';pauseBtn.setAttribute('aria-label',paused?'继续动画':'暂停动画')};document.querySelector('#full').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();
+    resize();requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
